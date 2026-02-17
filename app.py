@@ -38,11 +38,17 @@ NOTE: Do not write the article. Just search the web for related news if needed a
 
 OUTLINER_TEMPLATE = """Your job is to take as input a list of articles from the web along with users instruction on what article they want to write and generate an outline for the article."""
 
-WRITER_TEMPLATE = """Your job is to write an article, do it in this format:
+WRITER_TEMPLATE = """Your job is to write an article based on the information and outline provided by the previous nodes.
+
+You must STRICTLY adhere to this format:
 TITLE: <title>
 BODY: <body>
 
-NOTE: Do not copy the outline. You need to write the article with the info provided by the outline."""
+CRITICAL RULES:
+1. DO NOT include any introductory text, internal reasoning, or comments.
+2. DO NOT mention irrelevant news or other people with similar names found in the search.
+3. Output ONLY the exact 'TITLE:' and 'BODY:' sections. Nothing else.
+4. Do not copy the outline, use it to write the final text."""
 
 def create_agent(llm, tools, system_message: str):
     prompt = ChatPromptTemplate.from_messages([
