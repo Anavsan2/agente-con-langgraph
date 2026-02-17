@@ -138,11 +138,21 @@ if user_query := st.chat_input("Ejemplo: Últimas tendencias en IA..."):
                     for node_name, node_state in event.items():
                         st.write(f"✅ Nodo ejecutado: **{node_name}**")
                         
-                        # Extraemos de forma segura el último mensaje del nodo actual
+                        # Extraemos el último mensaje del estado
                         if "messages" in node_state and len(node_state["messages"]) > 0:
                             last_msg = node_state["messages"][-1]
-                            if hasattr(last_msg, 'content') and last_msg.content:
-                                final_response = last_msg.content
+                            raw_content = getattr(last_msg, 'content', "")
+                            
+                            # SOLUCIÓN: Si Gemini devuelve una lista, extraemos el texto de los diccionarios
+                            if isinstance(raw_content, list):
+                                extracted_text = [
+                                    str(item.get("text", item)) if isinstance(item, dict) else str(item) 
+                                    for item in raw_content
+                                ]
+                                final_response = " ".join(extracted_text)
+                            else:
+                                # Si es un string normal, lo guardamos tal cual
+                                final_response = str(raw_content)
                                 
                 status.update(label="¡Artículo finalizado!", state="complete", expanded=False)
             
@@ -150,9 +160,10 @@ if user_query := st.chat_input("Ejemplo: Últimas tendencias en IA..."):
                 status.update(label="Ocurrió un error", state="error")
                 st.error(f"Error de ejecución: {str(e)}")
         
-        # Validación final para mostrar en pantalla
+        # Ahora final_response es garantizadamente un string, strip() funcionará perfecto
         if final_response.strip():
             st.markdown(final_response)
+            # Guardamos la respuesta en el historial para que no desaparezca
             st.session_state.messages.append(AIMessage(content=final_response))
         else:
-            st.error("❌ El agente ejecutó los nodos pero no devolvió ningún texto. Esto puede pasar si Gemini bloqueó la respuesta por políticas de seguridad o hubo un error en la búsqueda.")
+            st.error("❌ El agente ejecutó los nodos pero la respuesta final estaba vacía.")
