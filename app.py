@@ -4,7 +4,7 @@ import streamlit as st
 from typing import Annotated, Literal, TypedDict
 
 # Importaciones de LangChain y LangGraph
-from langchain_tavily import TavilySearchResults
+from langchain_tavily import TavilySearch
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
