@@ -129,20 +129,30 @@ if user_query := st.chat_input("Ejemplo: Últimas tendencias en IA..."):
     app_graph = build_graph(google_api_key, tavily_api_key)
 
     with st.chat_message("assistant"):
-        # Usamos un status_container para mostrar el progreso interno de los nodos
+        final_response = ""
+        
+        # Usamos un status_container para mostrar el progreso interno
         with st.status("Procesando tu solicitud...", expanded=True) as status:
-            final_response = ""
+            try:
+                for event in app_graph.stream({"messages": [HumanMessage(content=user_query)]}):
+                    for node_name, node_state in event.items():
+                        st.write(f"✅ Nodo ejecutado: **{node_name}**")
+                        
+                        # Extraemos de forma segura el último mensaje del nodo actual
+                        if "messages" in node_state and len(node_state["messages"]) > 0:
+                            last_msg = node_state["messages"][-1]
+                            if hasattr(last_msg, 'content') and last_msg.content:
+                                final_response = last_msg.content
+                                
+                status.update(label="¡Artículo finalizado!", state="complete", expanded=False)
             
-            for event in app_graph.stream({"messages": [HumanMessage(content=user_query)]}):
-                for node_name, node_state in event.items():
-                    st.write(f"✅ Nodo ejecutado: **{node_name}**")
-                    if node_name == "writer":
-                        final_response = node_state['messages'][-1].content
-            
-            status.update(label="¡Artículo finalizado!", state="complete", expanded=False)
+            except Exception as e:
+                status.update(label="Ocurrió un error", state="error")
+                st.error(f"Error de ejecución: {str(e)}")
         
-        # Mostramos el resultado final
-        st.markdown(final_response)
-        
-        # Guardamos la respuesta final en el historial
-        st.session_state.messages.append(AIMessage(content=final_response))
+        # Validación final para mostrar en pantalla
+        if final_response.strip():
+            st.markdown(final_response)
+            st.session_state.messages.append(AIMessage(content=final_response))
+        else:
+            st.error("❌ El agente ejecutó los nodos pero no devolvió ningún texto. Esto puede pasar si Gemini bloqueó la respuesta por políticas de seguridad o hubo un error en la búsqueda.")
