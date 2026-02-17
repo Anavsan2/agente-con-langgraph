@@ -3,6 +3,7 @@ import functools
 import streamlit as st
 from typing import Annotated, Literal, TypedDict
 
+# Importaciones de LangChain y LangGraph
 from langchain_tavily import TavilySearchResults
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -40,6 +41,7 @@ OUTLINER_TEMPLATE = """Your job is to take as input a list of articles from the 
 WRITER_TEMPLATE = """Your job is to write an article, do it in this format:
 TITLE: <title>
 BODY: <body>
+
 NOTE: Do not copy the outline. You need to write the article with the info provided by the outline."""
 
 def create_agent(llm, tools, system_message: str):
@@ -127,12 +129,9 @@ if user_query := st.chat_input("Ejemplo: Últimas tendencias en IA..."):
         with st.status("Procesando tu solicitud...", expanded=True) as status:
             final_response = ""
             
-            # Pasamos solo el último mensaje al grafo para esta ejecución
-            # (Si quisieras memoria a largo plazo, le pasarías st.session_state.messages completo)
             for event in app_graph.stream({"messages": [HumanMessage(content=user_query)]}):
                 for node_name, node_state in event.items():
                     st.write(f"✅ Nodo ejecutado: **{node_name}**")
-                    # Guardamos el contenido del último nodo (writer) para mostrarlo al final
                     if node_name == "writer":
                         final_response = node_state['messages'][-1].content
             
