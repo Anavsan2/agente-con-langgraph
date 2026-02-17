@@ -2,4 +2,7 @@ streamlit
 langgraph
 langchain-google-genai
 langchain-tavily
+tavily-python
+langchain-community
 langchain-core
+python-dotenv
