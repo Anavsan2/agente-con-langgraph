@@ -77,10 +77,6 @@ def build_graph(google_key: str, tavily_key: str):
     os.environ["TAVILY_API_KEY"] = tavily_key
     
     llm = ChatGoogleGenerativeAI(model='gemini-2.5-flash', temperature=0.2)
-    
-    # ---------------------------------------------
-    # CORRECCIÓN APLICADA AQUÍ: TavilySearch
-    # ---------------------------------------------
     tools = [TavilySearch(max_results=5)]
 
     search_agent = create_agent(llm, tools, SEARCH_TEMPLATE)
@@ -121,7 +117,7 @@ for msg in st.session_state.messages:
         st.write(msg.content)
 
 # Capturar input del usuario
-if user_query := st.chat_input("Ejemplo: Últimas tendencias en IA..."):
+if user_query := st.chat_input("Ejemplo: Novedades sobre la exploración de Marte..."):
     if not google_api_key or not tavily_api_key:
         st.warning("⚠️ Por favor, introduce tus claves de API en la barra lateral primero.")
         st.stop()
@@ -136,6 +132,7 @@ if user_query := st.chat_input("Ejemplo: Últimas tendencias en IA..."):
 
     with st.chat_message("assistant"):
         final_response = ""
+        last_msg = None
         
         # Usamos un status_container para mostrar el progreso interno
         with st.status("Procesando tu solicitud...", expanded=True) as status:
@@ -149,7 +146,7 @@ if user_query := st.chat_input("Ejemplo: Últimas tendencias en IA..."):
                             last_msg = node_state["messages"][-1]
                             raw_content = getattr(last_msg, 'content', "")
                             
-                            # SOLUCIÓN: Si Gemini devuelve una lista, extraemos el texto de los diccionarios
+                            # Si Gemini devuelve una lista, extraemos el texto
                             if isinstance(raw_content, list):
                                 extracted_text = [
                                     str(item.get("text", item)) if isinstance(item, dict) else str(item) 
@@ -157,19 +154,29 @@ if user_query := st.chat_input("Ejemplo: Últimas tendencias en IA..."):
                                 ]
                                 final_response = " ".join(extracted_text)
                             else:
-                                # Si es un string normal, lo guardamos tal cual
                                 final_response = str(raw_content)
                                 
-                status.update(label="¡Artículo finalizado!", state="complete", expanded=False)
+                status.update(label="¡Proceso finalizado!", state="complete", expanded=False)
             
             except Exception as e:
                 status.update(label="Ocurrió un error", state="error")
                 st.error(f"Error de ejecución: {str(e)}")
         
-        # Ahora final_response es garantizadamente un string, strip() funcionará perfecto
-        if final_response.strip():
-            st.markdown(final_response)
-            # Guardamos la respuesta en el historial para que no desaparezca
-            st.session_state.messages.append(AIMessage(content=final_response))
+        # Limpieza de formato Markdown (quita los ``` si el modelo los añade)
+        clean_response = final_response.replace("```markdown", "").replace("```", "").strip()
+        
+        # Validación final para mostrar en pantalla
+        if clean_response:
+            st.markdown(clean_response)
+            st.session_state.messages.append(AIMessage(content=clean_response))
         else:
-            st.error("❌ El agente ejecutó los nodos pero la respuesta final estaba vacía.")
+            st.error("❌ La respuesta final está vacía.")
+            with st.expander("Ver detalles del error interno (Debug)"):
+                st.write("Esto es lo que devolvió Gemini internamente. Si ves información sobre 'SAFETY', el filtro bloqueó el contenido por tratar temas delicados:")
+                if last_msg:
+                    try:
+                        st.json(last_msg.dict())
+                    except:
+                        st.write(last_msg)
+                else:
+                    st.write("No se generó ningún mensaje en los nodos.")
