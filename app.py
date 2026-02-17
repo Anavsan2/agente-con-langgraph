@@ -71,7 +71,11 @@ def build_graph(google_key: str, tavily_key: str):
     os.environ["TAVILY_API_KEY"] = tavily_key
     
     llm = ChatGoogleGenerativeAI(model='gemini-2.5-flash', temperature=0.2)
-    tools = [TavilySearchResults(max_results=5)]
+    
+    # ---------------------------------------------
+    # CORRECCIÓN APLICADA AQUÍ: TavilySearch
+    # ---------------------------------------------
+    tools = [TavilySearch(max_results=5)]
 
     search_agent = create_agent(llm, tools, SEARCH_TEMPLATE)
     outliner_agent = create_agent(llm, [], OUTLINER_TEMPLATE)
